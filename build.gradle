@@ -1,6 +1,7 @@
 plugins {
    id 'java'
    id 'application'
+   id 'pmd'
    id 'org.ajoberstar.git-publish' version '4.2.0'
 }
 
@@ -17,6 +18,8 @@ java {
 dependencies {
     testImplementation 'org.junit.jupiter:junit-jupiter:5.7.0'
     testImplementation 'org.hamcrest:hamcrest-library:2.2'
+    // Gradle 9 no longer adds the JUnit platform launcher automatically
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.7.0'
 }
 
 tasks.withType(Test) {
@@ -31,3 +34,64 @@ application { //Allows  ./gradlew run --args=path-to-test-data
     mainClass = 'edu.odu.cs.MostCommonWords'
 }
 
+
+// ---------- static analysis (PMD) ----------
+// Analyze src/main/java only (not src/test/java).
+pmd {
+    toolVersion = '7.16.0'
+    sourceSets = [project.sourceSets.main]
+    ignoreFailures = true
+    consoleOutput = false
+    ruleSets = ['category/java/bestpractices.xml',
+                'category/java/errorprone.xml']
+}
+
+tasks.named('pmdMain') {
+    reports {
+        xml.required = false
+        html.required = true
+    }
+}
+
+
+// ---------- reports ----------
+// Website root is build/reports:
+//   ./tests/test/    unit test report
+//   ./javadoc/       API documentation
+//   ./pmd/main.html  PMD static analysis report
+tasks.register('copyHtml', Copy) {
+    dependsOn 'build'
+    from 'src/main/html'
+    into layout.buildDirectory.dir('reports')
+}
+
+tasks.register('copyDocs', Copy) {
+    dependsOn 'build', 'javadoc'
+    from layout.buildDirectory.dir('docs')
+    into layout.buildDirectory.dir('reports')
+}
+
+tasks.register('reports') {
+    dependsOn 'build', 'test', 'javadoc', 'pmdMain', 'copyHtml', 'copyDocs'
+}
+
+
+// ---------- deployReports ----------
+def originUrl = 'git remote get-url origin'.execute([], projectDir).text.trim()
+
+gitPublish {
+    repoUri = originUrl
+    branch = 'gh-pages'
+    contents {
+        from layout.buildDirectory.dir('reports')
+    }
+    commitMessage = 'Publish reports'
+}
+
+tasks.named('gitPublishCopy') {
+    dependsOn 'reports'
+}
+
+tasks.register('deployReports') {
+    dependsOn 'reports', 'gitPublishPush'
+}

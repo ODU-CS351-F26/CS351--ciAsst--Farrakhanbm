@@ -11,6 +11,11 @@ import static org.hamcrest.Matchers.*;
 public class TestWordFilter {
 
 
+  @Test
+  public final void easyPass() {
+    assertEquals(1,1);
+  }
+
   /**
    * Test method basic words
    */
