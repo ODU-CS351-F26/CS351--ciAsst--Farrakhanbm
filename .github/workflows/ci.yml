@@ -33,4 +33,5 @@ jobs:
     - name: Deploy reports to website
       run: ./gradlew deployReports --console=plain
       env:
-        GRGIT_USER: ${{ secrets.GITHUB_TOKEN }}
+        GRGIT_USER: x-access-token
+        GRGIT_PASS: ${{ secrets.GITHUB_TOKEN }}
